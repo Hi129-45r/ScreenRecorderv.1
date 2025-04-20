@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const micTestAudio = document.getElementById('micTestAudio');
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     const notification = document.getElementById('notification');
+    const storageLimitInput = document.getElementById('storageLimit');
     
     // Settings elements
     const qualitySelect = document.getElementById('qualitySelect');
@@ -39,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let microphone;
     let isMicActive = false;
     let microphoneAllowed = false;
+    let maxStorageMB = 500; // Default storage limit in MB
+    let estimatedSizeMB = 0;
+    const MB_TO_BYTES = 1024 * 1024;
 
     // Load saved settings
     loadSettings();
@@ -111,6 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         recordingTime.textContent = 
             `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        
+        // Update size estimation in the notification area
+        if (estimatedSizeMB > 0) {
+            const sizeInfo = ` (${estimatedSizeMB.toFixed(1)}MB/${maxStorageMB}MB)`;
+            if (!recordingTime.textContent.includes(sizeInfo)) {
+                recordingTime.textContent += sizeInfo;
+            }
+        }
     }
     
     // Test microphone
@@ -122,27 +134,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // Only ask for permission if we haven't been granted before
             if (!microphoneAllowed) {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioStream = stream;
                 microphoneAllowed = true;
             } else {
-                // Reuse previous permission
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioStream = stream;
             }
             
-            // Set up audio context for visualization
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioContext.createAnalyser();
             microphone = audioContext.createMediaStreamSource(audioStream);
             microphone.connect(analyser);
             
-            // Visualize sound waves
             visualizeSound();
             
-            // Play test sound
             micTestAudio.srcObject = audioStream;
             micTestAudio.play();
             
@@ -182,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataArray = new Uint8Array(bufferLength);
         analyser.getByteFrequencyData(dataArray);
         
-        // Simple visualization - adjust wave heights based on frequency data
         waves.forEach((wave, index) => {
             const value = dataArray[index * 10] || 0;
             const height = 5 + (value / 255) * 20;
@@ -195,11 +201,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start recording function
     async function startRecording() {
         try {
-            // Reset previous recording if any
             recordedChunks = [];
             totalPausedDuration = 0;
+            estimatedSizeMB = 0;
             
-            // Get screen capture stream
             const screenConstraints = {
                 video: {
                     mediaSource: sourceSelect.value,
@@ -216,7 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (audioToggle.checked) {
                 try {
-                    // Only ask for permission if we haven't been granted before
                     if (!microphoneAllowed) {
                         const audioConstraints = { 
                             audio: {
@@ -229,21 +233,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
                         microphoneAllowed = true;
                     } else {
-                        // Reuse previous permission
                         const audioConstraints = { 
-                            audio: true, // Don't need to specify constraints since we already have permission
+                            audio: true,
                             video: false 
                         };
                         audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
                     }
                     
-                    // Combine screen and audio streams
                     combinedStream = new MediaStream([
                         ...screenStream.getVideoTracks(),
                         ...audioStream.getAudioTracks()
                     ]);
                     
-                    // Show sound waves visualization
                     soundWaves.classList.remove('hidden');
                 } catch (audioErr) {
                     console.error('Error accessing microphone:', audioErr);
@@ -258,7 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             previewVideo.srcObject = combinedStream;
             
-            // Set up media recorder with proper audio codecs for MP4
             let mimeType;
             if (formatSelect.value === 'mp4') {
                 mimeType = 'video/mp4; codecs="avc1.640028, mp4a.40.2"';
@@ -294,19 +294,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 showNotification('Recording error occurred', 'error');
             };
             
-            mediaRecorder.start(100); // Collect data every 100ms
+            mediaRecorder.start(100);
             
-            // Set up UI
             startBtn.disabled = true;
             stopBtn.disabled = false;
             pauseBtn.disabled = false;
             recordingIndicator.classList.remove('hidden');
             recordingStartTime = Date.now();
             
-            // Start timer
             recordingInterval = setInterval(updateRecordingTime, 1000);
             
-            // Handle when user stops sharing screen
             screenStream.getVideoTracks()[0].onended = () => {
                 stopRecording();
             };
@@ -323,6 +320,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDataAvailable(event) {
         if (event.data.size > 0 && !isPaused) {
             recordedChunks.push(event.data);
+            
+            // Calculate estimated size
+            estimatedSizeMB = (event.data.size / MB_TO_BYTES) * recordedChunks.length;
+            
+            // Check if we're approaching the limit (stop at 90% to be safe)
+            if (estimatedSizeMB > maxStorageMB * 0.9) {
+                showNotification(`Recording stopped - reached ${Math.round(estimatedSizeMB)}MB of ${maxStorageMB}MB limit`, 'warning');
+                stopRecording();
+            }
         }
     }
     
@@ -331,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
             
-            // Stop all tracks
             if (previewVideo.srcObject) {
                 previewVideo.srcObject.getTracks().forEach(track => track.stop());
             }
@@ -346,6 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Handle recording stop
     async function handleStop() {
+        estimatedSizeMB = 0;
+        
         const format = formatSelect.value;
         let blobType;
         
@@ -402,9 +409,11 @@ document.addEventListener('DOMContentLoaded', () => {
             fps: fpsSelect.value,
             audio: audioToggle.checked,
             format: formatSelect.value,
-            source: sourceSelect.value
+            source: sourceSelect.value,
+            storageLimit: parseInt(storageLimitInput.value) || 500
         };
         
+        maxStorageMB = settings.storageLimit;
         localStorage.setItem('screenRecorderSettings', JSON.stringify(settings));
         showNotification('Settings saved', 'success');
     }
@@ -420,6 +429,11 @@ document.addEventListener('DOMContentLoaded', () => {
             audioToggle.checked = settings.audio || false;
             formatSelect.value = settings.format || 'webm';
             sourceSelect.value = settings.source || 'screen';
+            maxStorageMB = parseInt(settings.storageLimit) || 500;
+            
+            if (storageLimitInput) {
+                storageLimitInput.value = maxStorageMB;
+            }
         }
     }
     
