@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Screen Recorder</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+</head>
+<body class="light-theme">
+    <div class="container">
+        <header>
+            <h1 class="animate__animated animate__fadeIn">Ultimate Screen Recorder</h1>
+            <div class="header-buttons">
+                <button id="themeToggle" class="icon-btn tooltip">
+                    <i class="fas fa-moon"></i>
+                    <span class="tooltiptext">Toggle Theme</span>
+                </button>
+                <button id="settingsToggle" class="icon-btn tooltip">
+                    <i class="fas fa-cog"></i>
+                    <span class="tooltiptext">Settings</span>
+                </button>
+            </div>
+        </header>
+        
+        <div id="settingsPanel" class="settings-panel hidden animate__animated animate__fadeIn">
+            <h2><i class="fas fa-cog"></i> Settings</h2>
+            
+            <div class="setting-group">
+                <label for="qualitySelect"><i class="fas fa-tv"></i> Video Quality:</label>
+                <select id="qualitySelect" class="select">
+                    <option value="240">240p (Low)</option>
+                    <option value="360">360p</option>
+                    <option value="480">480p (SD)</option>
+                    <option value="720" selected>720p (HD)</option>
+                    <option value="1080">1080p (Full HD)</option>
+                    <option value="1440">1440p (QHD)</option>
+                    <option value="2160">2160p (4K)</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="fpsSelect"><i class="fas fa-film"></i> Frame Rate:</label>
+                <select id="fpsSelect" class="select">
+                    <option value="10">10 FPS</option>
+                    <option value="15">15 FPS</option>
+                    <option value="24" selected>24 FPS</option>
+                    <option value="30">30 FPS</option>
+                    <option value="60">60 FPS</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="audioToggle"><i class="fas fa-microphone"></i> Microphone:</label>
+                <label class="switch">
+                    <input type="checkbox" id="audioToggle">
+                    <span class="slider round"></span>
+                </label>
+                <button id="micTestBtn" class="small-btn"><i class="fas fa-headphones"></i> Test</button>
+            </div>
+            
+            <div class="setting-group">
+                <label for="formatSelect"><i class="fas fa-file-video"></i> Output Format:</label>
+                <select id="formatSelect" class="select">
+                    <option value="webm">WEBM (Recommended)</option>
+                    <option value="mp4">MP4</option>
+                    <option value="gif">GIF</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="sourceSelect"><i class="fas fa-desktop"></i> Capture Source:</label>
+                <select id="sourceSelect" class="select">
+                    <option value="screen">Entire Screen</option>
+                    <option value="window">Application Window</option>
+                    <option value="tab">Browser Tab</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <button id="saveSettingsBtn" class="btn secondary">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </div>
+        </div>
+        
+        <div class="controls animate__animated animate__fadeInUp">
+            <button id="startBtn" class="btn primary">
+                <i class="fas fa-circle"></i> Start Recording
+            </button>
+            <button id="stopBtn" class="btn danger" disabled>
+                <i class="fas fa-stop"></i> Stop Recording
+            </button>
+            <button id="pauseBtn" class="btn secondary" disabled>
+                <i class="fas fa-pause"></i> Pause
+            </button>
+        </div>
+        
+        <div class="preview-container">
+            <video id="previewVideo" controls autoplay muted></video>
+            <div id="recordingIndicator" class="recording-indicator hidden">
+                <div class="pulse"></div>
+                <span>Recording</span>
+                <span id="recordingTime">00:00:00</span>
+                <div class="sound-waves hidden" id="soundWaves">
+                    <div class="wave"></div>
+                    <div class="wave"></div>
+                    <div class="wave"></div>
+                </div>
+            </div>
+            
+            <div class="watermark animate__animated animate__fadeIn">
+                <span>Ultimate Recorder</span>
+            </div>
+        </div>
+        
+        <div class="download-section hidden" id="downloadSection">
+            <div class="download-card animate__animated animate__zoomIn">
+                <h3><i class="fas fa-check-circle success-icon"></i> Recording Complete</h3>
+                <div class="file-info">
+                    <i class="fas fa-file-video"></i>
+                    <span id="fileSize">Calculating size...</span>
+                </div>
+                <a id="downloadLink" class="btn download-btn">
+                    <i class="fas fa-download"></i> Download Recording
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio element for microphone test -->
+    <audio id="micTestAudio" hidden></audio>
+
+    <!-- Notification element -->
+    <div id="notification" class="notification hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
